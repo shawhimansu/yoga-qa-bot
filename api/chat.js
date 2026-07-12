@@ -1,8 +1,7 @@
 // Vercel Serverless Function: /api/chat
 // Uses the Claude API (Claude Sonnet 5) + local keyword retrieval over the
-// Q&A archive, so only the relevant few exchanges are sent per question —
-// keeping costs low (roughly 1-2 cents per question) despite using a paid,
-// higher-quality model.
+// Q&A archive, so only the relevant excerpts are sent per question —
+// keeping costs low despite using a paid, higher-quality model.
 
 const { search, loadExchanges } = require('./retrieval');
 
@@ -12,7 +11,12 @@ STRICT RULES:
 - Do not use any outside knowledge, general training knowledge, or anything beyond the excerpts below.
 - If the excerpts don't actually answer the question, say clearly: "This isn't covered in the archive." Do not guess or fill gaps with generic yoga knowledge.
 - Mention which source file the answer is drawn from when possible.
-- Stay grounded in the actual wording/teaching from the excerpts rather than inventing generic explanations.`;
+- Stay grounded in the actual wording/teaching from the excerpts rather than inventing generic explanations.
+
+ANSWER STYLE:
+- Give a full, thorough answer, not a one-line summary. Explain the reasoning and context the teacher gave, not just the conclusion.
+- If multiple excerpts touch on the question from different angles, weave them together into one coherent, well-developed answer rather than picking only the shortest relevant line.
+- It's fine to be as long as the material supports — err on the side of completeness rather than brevity.`;
 
 const CLAUDE_MODEL = 'claude-sonnet-5';
 
@@ -43,7 +47,8 @@ module.exports = async (req, res) => {
     });
   }
 
-  const retrieved = search(query, 5, 9000);
+  // Retrieve more excerpts and allow more total context (still cheap with Claude Sonnet 5)
+  const retrieved = search(query, 10, 20000);
   const context = retrieved.length
     ? retrieved.map((r, i) => `[Excerpt ${i + 1} — source: ${r.source}]\n${r.text}`).join('\n\n---\n\n')
     : '(No matching excerpts were found in the archive for this question.)';
@@ -65,7 +70,7 @@ module.exports = async (req, res) => {
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 700,
+        max_tokens: 2000,
         system: systemPrompt,
         messages: trimmedMessages,
       }),
