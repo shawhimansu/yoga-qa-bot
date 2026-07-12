@@ -2,7 +2,8 @@
   "version": 2,
   "functions": {
     "api/chat.js": {
-      "maxDuration": 20
+      "maxDuration": 20,
+      "includeFiles": "knowledge/**"
     }
   }
 }
