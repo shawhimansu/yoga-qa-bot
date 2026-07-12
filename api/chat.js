@@ -31,6 +31,18 @@ module.exports = async (req, res) => {
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
   const query = lastUserMessage ? lastUserMessage.content : '';
 
+  // Diagnostic: if the knowledge base failed to load entirely, say so clearly
+  // instead of silently answering "not covered" for every question.
+  const { loadExchanges } = require('./retrieval');
+  const allExchanges = loadExchanges();
+  if (!allExchanges || allExchanges.length === 0) {
+    return res.status(500).json({
+      error: 'The knowledge base could not be loaded on the server (0 exchanges found). ' +
+             'This usually means the /knowledge folder wasn\'t deployed with the function — ' +
+             'check that vercel.json includes "includeFiles": "knowledge/**" and redeploy.',
+    });
+  }
+
   // Retrieve only the relevant exchanges for this question (keeps token usage tiny)
   const retrieved = search(query, 5, 9000);
   const context = retrieved.length
