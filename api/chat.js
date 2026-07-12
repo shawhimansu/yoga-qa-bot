@@ -1,9 +1,10 @@
 // Vercel Serverless Function: /api/chat
-// Uses Groq's free-tier API (Llama 3.3 70B) + local keyword retrieval over the
+// Uses the Claude API (Claude Sonnet 5) + local keyword retrieval over the
 // Q&A archive, so only the relevant few exchanges are sent per question —
-// keeping every request well within Groq's free-tier token limits.
+// keeping costs low (roughly 1-2 cents per question) despite using a paid,
+// higher-quality model.
 
-const { search } = require('./retrieval');
+const { search, loadExchanges } = require('./retrieval');
 
 const SYSTEM_INSTRUCTIONS = `You are a Q&A assistant for a yoga philosophy teaching archive. You must answer ONLY using the retrieved archive excerpts provided below for this specific question — these are real Q&A exchanges between yoga teachers and students.
 
@@ -12,6 +13,8 @@ STRICT RULES:
 - If the excerpts don't actually answer the question, say clearly: "This isn't covered in the archive." Do not guess or fill gaps with generic yoga knowledge.
 - Mention which source file the answer is drawn from when possible.
 - Stay grounded in the actual wording/teaching from the excerpts rather than inventing generic explanations.`;
+
+const CLAUDE_MODEL = 'claude-sonnet-5';
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -31,9 +34,6 @@ module.exports = async (req, res) => {
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
   const query = lastUserMessage ? lastUserMessage.content : '';
 
-  // Diagnostic: if the knowledge base failed to load entirely, say so clearly
-  // instead of silently answering "not covered" for every question.
-  const { loadExchanges } = require('./retrieval');
   const allExchanges = loadExchanges();
   if (!allExchanges || allExchanges.length === 0) {
     return res.status(500).json({
@@ -43,7 +43,6 @@ module.exports = async (req, res) => {
     });
   }
 
-  // Retrieve only the relevant exchanges for this question (keeps token usage tiny)
   const retrieved = search(query, 5, 9000);
   const context = retrieved.length
     ? retrieved.map((r, i) => `[Excerpt ${i + 1} — source: ${r.source}]\n${r.text}`).join('\n\n---\n\n')
@@ -51,38 +50,40 @@ module.exports = async (req, res) => {
 
   const systemPrompt = `${SYSTEM_INSTRUCTIONS}\n\nRETRIEVED ARCHIVE EXCERPTS:\n\n${context}`;
 
-  // Only keep the last 4 turns of conversation (2 exchanges) — free tier is token-limited
-  const trimmedMessages = messages.slice(-4);
+  const trimmedMessages = messages.slice(-6).map(m => ({
+    role: m.role === 'assistant' ? 'assistant' : 'user',
+    content: m.content,
+  }));
 
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: CLAUDE_MODEL,
         max_tokens: 700,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...trimmedMessages,
-        ],
+        system: systemPrompt,
+        messages: trimmedMessages,
       }),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Groq API error:', data);
+      console.error('Claude API error:', data);
       const status = response.status === 429 ? 429 : response.status;
       const msg = status === 429
-        ? 'The free tier is briefly at capacity — please wait a few seconds and try again.'
+        ? 'The service is briefly at capacity — please wait a few seconds and try again.'
         : (data.error?.message || 'API error');
       return res.status(status).json({ error: msg });
     }
 
-    const reply = data.choices?.[0]?.message?.content || '(no response)';
+    const textBlock = data.content?.find(b => b.type === 'text');
+    const reply = textBlock?.text || '(no response)';
     return res.status(200).json({ reply });
   } catch (err) {
     console.error('Server error:', err);
