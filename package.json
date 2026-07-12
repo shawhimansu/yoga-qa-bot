@@ -1,0 +1,6 @@
+{
+  "name": "yoga-qa-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Password-gated Q&A chatbot answering strictly from a yoga teacher discussion archive, deployed on Vercel."
+}

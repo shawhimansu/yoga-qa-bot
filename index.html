@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yogic Life — Teacher Q&A Archive</title>
+<style>
+  :root {
+    --indigo-deep: #14213d;
+    --indigo-mid: #1f2f52;
+    --saffron: #e0a458;
+    --saffron-soft: #f0c98a;
+    --cream: #f6f1e7;
+    --ash: #9aa5bd;
+    --line: rgba(230, 217, 194, 0.14);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: var(--indigo-deep);
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    color: var(--cream);
+  }
+  body {
+    display: flex; flex-direction: column; align-items: center;
+    background-image: radial-gradient(circle at 50% -10%, #24365e 0%, var(--indigo-deep) 60%);
+  }
+
+  .wrap { width: 100%; max-width: 720px; height: 100%; display: flex; flex-direction: column; padding: 0 20px; }
+
+  header { padding: 28px 4px 18px; border-bottom: 1px solid var(--line); }
+  header .eyebrow {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--saffron); margin: 0 0 6px;
+  }
+  header h1 { margin: 0; font-size: 26px; font-weight: 400; letter-spacing: 0.01em; }
+  header p { margin: 6px 0 0; font-size: 14px; color: var(--ash); font-family: 'Helvetica Neue', Arial, sans-serif; }
+
+  /* Gate screen */
+  #gate { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
+  #gate .mark { font-size: 34px; color: var(--saffron); letter-spacing: 0.3em; }
+  #gate input {
+    width: 260px; padding: 12px 14px; border-radius: 2px;
+    border: 1px solid var(--line); background: var(--indigo-mid); color: var(--cream);
+    font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 14px;
+  }
+  #gate button, .send-btn {
+    padding: 12px 22px; border-radius: 2px; border: 1px solid var(--saffron);
+    background: transparent; color: var(--saffron-soft); cursor: pointer;
+    font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; letter-spacing: 0.06em;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  #gate button:hover, .send-btn:hover { background: var(--saffron); color: var(--indigo-deep); }
+  #gate-error { color: #e08a7c; font-size: 13px; font-family: 'Helvetica Neue', Arial, sans-serif; min-height: 18px; }
+
+  /* Chat screen */
+  #chat-screen { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  #messages { flex: 1; overflow-y: auto; padding: 22px 2px; display: flex; flex-direction: column; gap: 18px; }
+
+  .msg { max-width: 92%; line-height: 1.55; font-size: 15px; }
+  .msg.user { align-self: flex-end; text-align: right; }
+  .msg .role {
+    font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ash); margin-bottom: 5px;
+  }
+  .msg.user .role { color: var(--saffron-soft); }
+  .msg .bubble { white-space: pre-wrap; }
+  .msg.assistant .bubble { color: var(--cream); }
+  .msg.user .bubble { color: var(--saffron-soft); }
+  .msg.system .bubble { color: var(--ash); font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-style: italic; }
+
+  #input-row {
+    display: flex; gap: 10px; padding: 16px 2px 22px; border-top: 1px solid var(--line);
+  }
+  #input-row textarea {
+    flex: 1; resize: none; min-height: 46px; max-height: 140px;
+    padding: 12px 14px; border-radius: 2px; border: 1px solid var(--line);
+    background: var(--indigo-mid); color: var(--cream); font-family: inherit; font-size: 15px;
+  }
+  #input-row textarea:focus, #gate input:focus { outline: 2px solid var(--saffron); outline-offset: 1px; }
+
+  .typing { display: flex; gap: 4px; align-items: center; }
+  .typing span {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--ash);
+    animation: pulse 1.1s infinite ease-in-out;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.15s; }
+  .typing span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes pulse { 0%, 60%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .typing span { animation: none; opacity: 0.6; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Yogic Life Classes</p>
+    <h1>Teacher Discussion Archive</h1>
+    <p>Answers drawn only from real teacher Q&amp;A — nothing outside the archive.</p>
+  </header>
+
+  <div id="gate">
+    <div class="mark">卐 ⸻ ॐ</div>
+    <input type="password" id="password-input" placeholder="Access password" autocomplete="off" />
+    <button id="gate-submit">Enter</button>
+    <div id="gate-error"></div>
+  </div>
+
+  <div id="chat-screen">
+    <div id="messages"></div>
+    <div id="input-row">
+      <textarea id="msg-input" placeholder="Ask a question about the teachings…" rows="1"></textarea>
+      <button class="send-btn" id="send-btn">Ask</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const gate = document.getElementById('gate');
+  const chatScreen = document.getElementById('chat-screen');
+  const passwordInput = document.getElementById('password-input');
+  const gateSubmit = document.getElementById('gate-submit');
+  const gateError = document.getElementById('gate-error');
+  const messagesEl = document.getElementById('messages');
+  const msgInput = document.getElementById('msg-input');
+  const sendBtn = document.getElementById('send-btn');
+
+  let password = sessionStorage.getItem('yqa_pw') || '';
+  let history = [];
+
+  function addMessage(role, text) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + role;
+    const roleLabel = role === 'user' ? 'You' : role === 'assistant' ? 'Archive' : '';
+    div.innerHTML = (roleLabel ? `<div class="role">${roleLabel}</div>` : '') + `<div class="bubble"></div>`;
+    div.querySelector('.bubble').textContent = text;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return div;
+  }
+
+  function addTyping() {
+    const div = document.createElement('div');
+    div.className = 'msg assistant';
+    div.id = 'typing-indicator';
+    div.innerHTML = `<div class="role">Archive</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
+
+  async function tryEnter() {
+    const pw = passwordInput.value.trim();
+    if (!pw) return;
+    gateError.textContent = '';
+    gateSubmit.disabled = true;
+    gateSubmit.textContent = 'Checking…';
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw, messages: [{ role: 'user', content: 'Namaskar' }] }),
+      });
+      if (res.status === 401) {
+        gateError.textContent = 'Incorrect password. Please try again.';
+        gateSubmit.disabled = false;
+        gateSubmit.textContent = 'Enter';
+        return;
+      }
+      const data = await res.json();
+      password = pw;
+      sessionStorage.setItem('yqa_pw', pw);
+      gate.style.display = 'none';
+      chatScreen.style.display = 'flex';
+      addMessage('system', 'Ask about anything discussed in the teacher archive — diet, sadhana, philosophy of mind, and more. If it isn\'t in the archive, the assistant will say so rather than guess.');
+      msgInput.focus();
+    } catch (e) {
+      gateError.textContent = 'Something went wrong. Please try again.';
+      gateSubmit.disabled = false;
+      gateSubmit.textContent = 'Enter';
+    }
+  }
+
+  gateSubmit.addEventListener('click', tryEnter);
+  passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryEnter(); });
+
+  async function sendMessage() {
+    const text = msgInput.value.trim();
+    if (!text) return;
+    msgInput.value = '';
+    msgInput.style.height = 'auto';
+    addMessage('user', text);
+    history.push({ role: 'user', content: text });
+    sendBtn.disabled = true;
+    addTyping();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, messages: history }),
+      });
+      const data = await res.json();
+      removeTyping();
+      if (!res.ok) {
+        addMessage('system', data.error || 'Something went wrong.');
+      } else {
+        addMessage('assistant', data.reply);
+        history.push({ role: 'assistant', content: data.reply });
+      }
+    } catch (e) {
+      removeTyping();
+      addMessage('system', 'Connection error. Please try again.');
+    } finally {
+      sendBtn.disabled = false;
+      msgInput.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+  msgInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  msgInput.addEventListener('input', () => {
+    msgInput.style.height = 'auto';
+    msgInput.style.height = Math.min(msgInput.scrollHeight, 140) + 'px';
+  });
+
+  // Auto-resume session if password already stored
+  if (password) {
+    gate.style.display = 'none';
+    chatScreen.style.display = 'flex';
+    addMessage('system', 'Welcome back. Ask about anything discussed in the teacher archive.');
+  }
+</script>
+</body>
+</html>
